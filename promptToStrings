@@ -1,0 +1,47 @@
+import mysql.connector
+import re
+import csv
+
+mydb = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="root",
+    database="afdata"
+)
+cursor = mydb.cursor()
+
+cursor.execute(
+    "select id, completion from openaiprompt order by id asc limit 100000")
+results = cursor.fetchall()
+for x in results:
+    try:
+        input_str = x[1].strip()
+        # Split the input string into sections based on empty lines
+        sections = input_str.split("\n\n")
+        sections = [s for s in sections if s.strip()]
+        print("ID: ", x[0], "sections: ", sections)
+        # Extract the technologies section and split it into a list of strings
+        tech_list = sections[0].split(":")[1].strip().split("\n")
+        tech_list = [re.sub("^[•-]\s*", "", tech)
+                     for tech in tech_list if tech.strip() != ""]
+        print("ID: ", x[0], "tech_list: ", tech_list)
+        # Extract the office location and industry sections as strings
+        office_location = sections[1].split(":")[1].strip().split("\n")
+        office_location = [re.sub("^[•-]\s*", "", office)
+                           for office in office_location if office.strip() != ""]
+        print("ID: ", x[0], "office_location: ", office_location)
+        industry = sections[2].split(":")[1].strip().split("\n")
+        industry = [re.sub("^[•-]\s*", "", ind)
+                    for ind in industry if ind.strip() != ""]
+        # Print the results
+        print("ID: ", x[0], "industry: ", industry)
+        sql = ("update small_prompt_object set ai_technology = %s, ai_locations =%s, ai_industry = %s where id = %s")
+        tech_list_json = ','.join(tech_list)
+        office_location_json = ','.join(office_location)
+        industry_json = ','.join(industry)
+        val = (tech_list_json, office_location_json, industry_json, x[0])
+        cursor.execute(sql, val)
+        mydb.commit()
+        print("success")
+    except IndexError:
+        print("IndexError on ID: ", x[0])

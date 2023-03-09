@@ -1,0 +1,62 @@
+import tensorflow as tf
+import tensorflow_transform as tft
+import pandas as pd
+from tensorflow_transform.tf_metadata import schema_utils
+import numpy
+
+# Define your schema
+SCHEMA = tft.DatasetMetadata.from_feature_spec({
+    'employer': tf.io.FixedLenFeature([], tf.string),
+    'headline': tf.io.FixedLenFeature([], tf.string),
+    'occupation': tf.io.FixedLenFeature([], tf.string),
+    'ai_industry': tf.io.VarLenFeature(tf.string),
+    'ai_locations': tf.io.VarLenFeature(tf.string),
+    'ai_technology': tf.io.VarLenFeature(tf.string)
+}).schema
+
+print(schema_utils.schema_as_feature_spec(SCHEMA))
+
+# Load your transform function
+transform_fn = tft.TFTransformOutput(
+    'C:\\Users\\ottok\\OneDrive\\Dokument\\ai\\transform_fn')
+
+# Define the feature spec of the transformed data
+feature_spec = transform_fn.transformed_feature_spec().copy()
+
+# Define the data types of the columns in your CSV file
+record_defaults = [tf.string] * 6
+
+# Read the transformed data as a tf.data.Dataset
+data = tf.data.TFRecordDataset(
+    'C:\\Users\\ottok\\OneDrive\\Dokument\\ai\\train_transformed-00000-of-00001.tfrecord')
+
+# Parse the serialized examples in the tf.data.Dataset object back into a dictionary
+
+
+def parse_example(serialized_example):
+    parsed_example = tf.io.parse_single_example(
+        serialized_example, feature_spec)
+    print(parsed_example)
+    return {k: tf.reshape(v, [-1]) for k, v in parsed_example.items()}
+
+
+data = data.map(parse_example)
+
+# Convert the parsed dictionary into a CSV string
+
+
+def to_csv_string(inputs):
+    csv_string = tf.io.decode_csv(
+        tf.stack(list(inputs.values()), axis=-1), record_defaults)
+    return tf.strings.reduce_join(tf.stack(csv_string, axis=-1), separator=',')
+
+
+data = data.map(to_csv_string)
+
+# Write the CSV strings to a file
+with open('C:\\Users\\ottok\\OneDrive\\Dokument\\ai\\transformed.csv', 'w') as f:
+    for csv_string in data:
+        f.write(csv_string.numpy().decode('utf-8') + '\n')
+
+# Read the CSV file into a Pandas dataframe
+df = pd.read_csv('C:\\Users\\ottok\\OneDrive\\Dokument\\ai\\transformed.csv')
