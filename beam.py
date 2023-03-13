@@ -72,6 +72,7 @@ with beam.Pipeline() as pipeline:
             | 'FixCommasTrainData' >> beam.Map(
                 lambda line: line.replace(b', ', b','))
             | 'DecodeTrainData' >> csv_tfxio.BeamSource())
+        print(raw_data)
         raw_dataset = (raw_data, csv_tfxio.TensorAdapterConfig())
       # The TFXIO output format is chosen for improved performance.
 
